@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% import "_macros.html" as f %}
+{% block title %}Editar presupuesto · Cotizador{% endblock %}
+
+{% block content %}
+  <div class="crumb">
+    <a href="{{ url_for('main.index') }}">Viajes</a>
+    / <a href="{{ url_for('viajes.detalle', viaje_id=viaje.idViaje) }}">{{ viaje.origen }} → {{ viaje.destino }}</a>
+    / Presupuesto
+  </div>
+
+  <div class="page-head"><h1>Editar presupuesto</h1></div>
+
+  <div class="card card-pad" style="max-width:720px">
+    <p class="muted small">
+      Aquí capturas los montos manuales. Los costos de vuelos, hospedaje, transporte y
+      actividades se calculan automáticamente a partir de las opciones marcadas como
+      «incluidas». Todos los valores están en {{ viaje.monedaPrincipal }}.
+    </p>
+    <form method="post" action="">
+      {{ f.render_campos(campos, valores) }}
+      <div class="form-foot">
+        <button type="submit" class="btn">Guardar</button>
+        <a class="btn btn-ghost" href="{{ url_for('viajes.detalle', viaje_id=viaje.idViaje) }}#presupuesto">Cancelar</a>
+      </div>
+    </form>
+  </div>
+{% endblock %}

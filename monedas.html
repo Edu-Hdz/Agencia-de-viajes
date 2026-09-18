@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% import "_macros.html" as f %}
+{% block title %}Monedas · Cotizador{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <h1>Monedas</h1>
+      <p class="muted" style="margin:0">Se usan como destino al generar cotizaciones.</p>
+    </div>
+    <div class="actions">
+      <button class="btn" data-toggle="form-moneda">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Agregar moneda
+      </button>
+    </div>
+  </div>
+
+  <form id="form-moneda" class="inline-form" method="post" action="{{ url_for('monedas.nueva') }}" hidden>
+    {{ f.render_campos(campos, valores) }}
+    <div class="form-foot">
+      <button type="submit" class="btn">Agregar</button>
+      <button type="button" class="btn btn-ghost" data-toggle="form-moneda">Cancelar</button>
+    </div>
+  </form>
+
+  {% if monedas %}
+    <div class="table-wrap">
+      <table class="data">
+        <thead>
+          <tr><th>Código</th><th>Nombre</th><th class="num">Tipo de cambio sugerido</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for m in monedas %}
+            <tr>
+              <td><span class="badge info">{{ m.codigo }}</span></td>
+              <td>{{ m.nombre }}</td>
+              <td class="num">{{ m.tipoCambio }}</td>
+              <td class="row-actions">
+                <a class="btn btn-sm btn-ghost" href="{{ url_for('monedas.editar', moneda_id=m.idMoneda) }}">Editar</a>
+                <form method="post" action="{{ url_for('monedas.eliminar', moneda_id=m.idMoneda) }}"
+                      data-confirm="¿Eliminar la moneda {{ m.codigo }}?">
+                  <button class="btn btn-sm btn-danger" type="submit">Eliminar</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="muted small" style="margin-top:12px">
+      El tipo de cambio se interpreta como: unidades de esa moneda por 1 unidad de la
+      moneda principal del viaje. Es solo un valor sugerido; puedes ajustarlo al cotizar.
+    </p>
+  {% else %}
+    <div class="card card-pad empty"><p>No hay monedas. Agrega al menos una para poder cotizar.</p></div>
+  {% endif %}
+{% endblock %}

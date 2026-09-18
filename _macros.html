@@ -1,0 +1,108 @@
+{#
+  Macros de formulario.
+
+  render_campos(campos, valores) recorre la lista de campos (definida en
+  field_specs.py) y dibuja el control HTML adecuado para cada tipo. Así todos
+  los formularios de la app se generan igual, sin repetir código.
+#}
+
+{% macro _valor(valores, nombre) %}{{ valores.get(nombre, '') if valores else '' }}{% endmacro %}
+
+{% macro render_campo(c, valores) %}
+  {% set nombre = c.name %}
+  {% set v = valores.get(nombre, '') if valores else '' %}
+
+  {% if c.tipo == 'bool' %}
+    {% set marcado = v in [true, 'on', 'true', 'True', '1', 1] %}
+    <div class="field field-check col-2">
+      <label class="switch">
+        <input type="checkbox" name="{{ nombre }}" {% if marcado %}checked{% endif %}>
+        <span class="track"></span>
+      </label>
+      <label for="{{ nombre }}">{{ c.label }}</label>
+    </div>
+    {% if c.ayuda %}<div class="field col-2" style="margin-top:-8px"><span class="hint">{{ c.ayuda }}</span></div>{% endif %}
+
+  {% else %}
+    <div class="field {% if c.tipo in ['textarea'] %}col-2{% endif %}">
+      <label for="{{ nombre }}">
+        {{ c.label }}{% if c.requerido %} <span class="req" title="Obligatorio">*</span>{% endif %}
+      </label>
+
+      {% if c.tipo == 'textarea' %}
+        <textarea id="{{ nombre }}" name="{{ nombre }}"
+                  {% if c.placeholder %}placeholder="{{ c.placeholder }}"{% endif %}>{{ v }}</textarea>
+
+      {% elif c.tipo == 'select' %}
+        <select id="{{ nombre }}" name="{{ nombre }}">
+          {% for op in c.opciones %}
+            <option value="{{ op }}" {% if v|string == op|string %}selected{% endif %}>{{ op }}</option>
+          {% endfor %}
+        </select>
+
+      {% elif c.tipo == 'int' %}
+        <input type="number" step="1" id="{{ nombre }}" name="{{ nombre }}" value="{{ v }}"
+               {% if c.placeholder %}placeholder="{{ c.placeholder }}"{% endif %}>
+
+      {% elif c.tipo == 'money' %}
+        <input type="number" step="0.01" min="0" inputmode="decimal" id="{{ nombre }}" name="{{ nombre }}" value="{{ v }}"
+               {% if c.placeholder %}placeholder="{{ c.placeholder }}"{% endif %}>
+
+      {% elif c.tipo == 'float' %}
+        <input type="number" step="0.1" id="{{ nombre }}" name="{{ nombre }}" value="{{ v }}"
+               {% if c.placeholder %}placeholder="{{ c.placeholder }}"{% endif %}>
+
+      {% elif c.tipo == 'date' %}
+        <input type="date" id="{{ nombre }}" name="{{ nombre }}" value="{{ v }}">
+
+      {% elif c.tipo == 'datetime' %}
+        <input type="datetime-local" id="{{ nombre }}" name="{{ nombre }}" value="{{ v }}">
+
+      {% else %}
+        <input type="text" id="{{ nombre }}" name="{{ nombre }}" value="{{ v }}"
+               {% if c.placeholder %}placeholder="{{ c.placeholder }}"{% endif %}>
+      {% endif %}
+
+      {% if c.ayuda %}<span class="hint">{{ c.ayuda }}</span>{% endif %}
+    </div>
+  {% endif %}
+{% endmacro %}
+
+{% macro render_campos(campos, valores) %}
+  <div class="form-grid">
+    {% for c in campos %}{{ render_campo(c, valores) }}{% endfor %}
+  </div>
+{% endmacro %}
+
+{# Interruptor que alterna un campo booleano (ej. "incluido") y envia el
+   formulario al cambiar. No manda el valor: la ruta invierte el estado actual. #}
+{% macro toggle(recurso, item_id, campo, valor) %}
+<form method="post" action="{{ url_for('items.alternar', recurso=recurso, item_id=item_id) }}" style="display:inline-block">
+  <input type="hidden" name="campo" value="{{ campo }}">
+  <label class="switch" title="Alternar">
+    <input type="checkbox" data-autosubmit {% if valor %}checked{% endif %}>
+    <span class="track"></span>
+  </label>
+</form>
+{% endmacro %}
+
+{# Formulario en linea (oculto) para agregar un elemento a una seccion. #}
+{% macro add_inline(form_id, action, campos, valores, label='Agregar') %}
+<form id="{{ form_id }}" class="inline-form" method="post" action="{{ action }}" hidden>
+  {{ render_campos(campos, valores) }}
+  <div class="form-foot">
+    <button type="submit" class="btn">{{ label }}</button>
+    <button type="button" class="btn btn-ghost" data-toggle="{{ form_id }}">Cancelar</button>
+  </div>
+</form>
+{% endmacro %}
+
+{# Botones de editar/eliminar para una fila de tabla. #}
+{% macro row_actions(recurso, item_id, confirm) %}
+<div class="row-actions">
+  <a class="btn btn-sm btn-ghost" href="{{ url_for('items.editar', recurso=recurso, item_id=item_id) }}">Editar</a>
+  <form method="post" action="{{ url_for('items.eliminar', recurso=recurso, item_id=item_id) }}" data-confirm="{{ confirm }}">
+    <button class="btn btn-sm btn-danger" type="submit">Eliminar</button>
+  </form>
+</div>
+{% endmacro %}

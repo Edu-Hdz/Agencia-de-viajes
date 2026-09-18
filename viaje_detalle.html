@@ -1,0 +1,372 @@
+{% extends "base.html" %}
+{% import "_macros.html" as f %}
+{% block title %}{{ viaje.origen }} → {{ viaje.destino }} · Cotizador{% endblock %}
+
+{% block content %}
+{% set num = viaje.numViajeros or 1 %}
+{% set moneda = viaje.monedaPrincipal %}
+
+{# ---------------- Encabezado del viaje ---------------- #}
+<div class="crumb"><a href="{{ url_for('main.index') }}">Viajes</a> / {{ viaje.origen }} → {{ viaje.destino }}</div>
+
+<div class="page-head">
+  <div>
+    <h1>{{ viaje.origen }} <span style="color:var(--brand)">→</span> {{ viaje.destino }}</h1>
+    <div class="meta-row">
+      <div class="meta"><span class="k">Fechas</span>
+        <span class="v">{% if viaje.fechaSalida %}{{ viaje.fechaSalida|fecha }} – {{ viaje.fechaRegreso|fecha }}{% else %}Sin definir{% endif %}</span></div>
+      {% if viaje.duracion_dias is not none %}
+      <div class="meta"><span class="k">Duración</span><span class="v">{{ viaje.duracion_dias }} días</span></div>{% endif %}
+      <div class="meta"><span class="k">Viajeros</span><span class="v">{{ num }}</span></div>
+      <div class="meta"><span class="k">Moneda</span><span class="v">{{ moneda }}</span></div>
+    </div>
+  </div>
+  <div class="actions">
+    <a class="btn btn-ghost" href="{{ url_for('viajes.editar', viaje_id=viaje.idViaje) }}">Editar viaje</a>
+    <form method="post" action="{{ url_for('viajes.eliminar', viaje_id=viaje.idViaje) }}"
+          data-confirm="¿Eliminar el viaje completo y todos sus datos?">
+      <button class="btn btn-danger" type="submit">Eliminar</button>
+    </form>
+  </div>
+</div>
+
+{# ---------------- Panel de presupuesto (protagonista) ---------------- #}
+{% set total = presupuesto.costoTotal or 0 %}
+{% set partes = [
+  ('Vuelos', 'seg-vuelo', presupuesto.costoVuelo or 0),
+  ('Hospedaje', 'seg-hospedaje', presupuesto.costoHospedaje or 0),
+  ('Transporte', 'seg-transporte', presupuesto.costoTransporte or 0),
+  ('Actividades', 'seg-actividades', presupuesto.costoActividades or 0),
+  ('Comida', 'seg-alimentos', presupuesto.costoAlimentos or 0),
+  ('Gastos extra', 'seg-extras', presupuesto.gastosExtras or 0),
+] %}
+
+<section class="budget" id="presupuesto">
+  <div class="budget-grid">
+    <div class="budget-figure">
+      <div class="eyebrow">Costo estimado del viaje</div>
+      <div class="budget-total">{{ total|money }}<span class="code">{{ moneda }}</span></div>
+      <div class="budget-perperson">
+        <span class="cifra">{{ (presupuesto.costoPorPersona or 0)|money }} {{ moneda }}</span> por persona
+      </div>
+
+      {% if presupuesto.montoDisponible %}
+        {% if presupuesto.restante >= 0 %}
+          <div class="budget-status ok">✓ Dentro del presupuesto · sobran {{ presupuesto.restante|money }} {{ moneda }}</div>
+        {% else %}
+          <div class="budget-status over">Excede el presupuesto por {{ (-presupuesto.restante)|money }} {{ moneda }}</div>
+        {% endif %}
+        <div class="budget-available">Dinero disponible: {{ presupuesto.montoDisponible|money }} {{ moneda }}</div>
+      {% else %}
+        <div class="budget-available">Aún no defines el dinero disponible.</div>
+      {% endif %}
+    </div>
+
+    <div class="budget-detail">
+      <h3>Desglose de costos</h3>
+      {% if total > 0 %}
+        <div class="bar">
+          {% for nombre, clase, valor in partes %}
+            {% if valor > 0 %}<span class="{{ clase }}" style="width:{{ (valor / total * 100)|round(3) }}%" title="{{ nombre }}: {{ valor|money }} {{ moneda }}"></span>{% endif %}
+          {% endfor %}
+        </div>
+        <ul class="legend">
+          {% for nombre, clase, valor in partes %}
+            <li>
+              <span class="dot {{ clase }}"></span>
+              <span class="name">{{ nombre }}</span>
+              <span class="val cifra">{{ valor|money }}</span>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="muted">Agrega vuelos, hospedaje u otros costos y aparecerán aquí.</p>
+      {% endif %}
+    </div>
+  </div>
+  <div class="budget-foot">
+    <p class="note">Vuelos, hospedaje, transporte y actividades se calculan de las opciones «incluidas». Comida y gastos extra son valores que capturas tú.</p>
+    <div class="actions">
+      <a class="btn btn-subtle btn-sm" href="{{ url_for('viajes.editar_presupuesto', viaje_id=viaje.idViaje) }}">Editar montos manuales</a>
+    </div>
+  </div>
+</section>
+
+{# ---------------- Cotizaciones ---------------- #}
+<section class="section" id="cotizaciones">
+  <div class="section-head">
+    <h2>Cotizaciones</h2>
+    <span class="count">{{ viaje.cotizaciones|length }}</span>
+  </div>
+  <div class="section-body">
+    {% if monedas %}
+      <form class="quote-form" method="post" action="{{ url_for('cotizaciones.nueva', viaje_id=viaje.idViaje) }}">
+        <div class="field">
+          <label for="selMoneda">Moneda de destino</label>
+          <select id="selMoneda" name="idMoneda">
+            {% for m in monedas %}
+              <option value="{{ m.idMoneda }}" data-rate="{{ m.tipoCambio }}">{{ m.codigo }} — {{ m.nombre }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="tipoCambio">Tipo de cambio</label>
+          <input type="number" step="0.0001" min="0" id="tipoCambio" name="tipoCambio">
+          <span class="hint">{{ moneda }} → destino</span>
+        </div>
+        <div class="field">
+          <label for="fechaCot">Fecha</label>
+          <input type="date" id="fechaCot" name="fecha" value="{{ hoy_iso }}">
+        </div>
+        <button class="btn" type="submit">Generar cotización</button>
+      </form>
+    {% else %}
+      <p class="muted">Primero <a href="{{ url_for('monedas.index') }}">agrega una moneda</a> para poder generar cotizaciones.</p>
+    {% endif %}
+
+    {% if viaje.cotizaciones %}
+      <div class="table-wrap">
+        <table class="data">
+          <thead>
+            <tr><th>Fecha</th><th>Moneda</th><th class="num">Tipo de cambio</th><th class="num">Total</th><th class="num">Por persona</th><th></th></tr>
+          </thead>
+          <tbody>
+            {% for c in viaje.cotizaciones %}
+              <tr>
+                <td class="nowrap">{{ c.fecha|fecha }}</td>
+                <td><span class="badge info">{{ c.moneda.codigo if c.moneda else '—' }}</span></td>
+                <td class="num">{{ c.tipoCambio }}</td>
+                <td class="num linea cifra">{{ c.costoTotal|money }}</td>
+                <td class="num cifra">{{ c.costoPorPersona|money }}</td>
+                <td class="row-actions">
+                  <a class="btn btn-sm btn-ghost" href="{{ url_for('cotizaciones.detalle', cotizacion_id=c.idCotizacion) }}">Ver</a>
+                  <form method="post" action="{{ url_for('cotizaciones.eliminar', cotizacion_id=c.idCotizacion) }}" data-confirm="¿Eliminar esta cotización?">
+                    <button class="btn btn-sm btn-danger" type="submit">Eliminar</button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+  </div>
+</section>
+
+{# ---------------- Viajeros y documentación ---------------- #}
+<section class="section" id="viajeros">
+  <div class="section-head">
+    <h2>Viajeros</h2>
+    <span class="count">{{ viaje.viajeros|length }}</span>
+    <div class="actions"><button class="btn btn-sm" data-toggle="form-viajero">+ Agregar viajero</button></div>
+  </div>
+  <div class="section-body">
+    {{ f.add_inline('form-viajero',
+        url_for('items.crear_en_viaje', parent_id=viaje.idViaje, recurso='viajeros'),
+        recursos['viajeros']['campos'], defaults['viajeros'], 'Agregar viajero') }}
+
+    {% if viaje.viajeros %}
+      {% for v in viaje.viajeros %}
+        <div class="traveler">
+          <div class="traveler-head">
+            <span class="who">{{ v.nombre }}</span>
+            <span class="meta-inline">
+              {{ v.nacionalidad or 'Sin nacionalidad' }}{% if v.pasaporte %} · Pasaporte {{ v.pasaporte }}{% endif %}
+            </span>
+            <div class="actions">{{ f.row_actions('viajeros', v.idViajero, '¿Eliminar a ' ~ v.nombre ~ '?') }}</div>
+          </div>
+          <div class="traveler-body">
+            {% if v.documentacion %}
+              <div class="table-wrap">
+                <table class="data">
+                  <thead><tr><th>Documento</th><th>Estado</th><th>Descripción</th><th>Vence</th><th></th></tr></thead>
+                  <tbody>
+                    {% for d in v.documentacion %}
+                      <tr>
+                        <td class="nowrap">{{ d.tipoDocumento }}</td>
+                        <td>
+                          {% set cls = 'ok' if d.estado == 'Vigente' else ('bad' if d.estado == 'Vencido' else ('warn' if d.estado in ['Pendiente','En trámite'] else '')) %}
+                          <span class="badge {{ cls }}">{{ d.estado or '—' }}</span>
+                        </td>
+                        <td>{{ d.descripcion or '—' }}{% if d.observaciones %}<br><span class="muted small">{{ d.observaciones }}</span>{% endif %}</td>
+                        <td class="nowrap">{{ d.fechaVencimiento|fecha }}</td>
+                        <td>{{ f.row_actions('documentacion', d.idDocumentacion, '¿Eliminar este documento?') }}</td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            {% else %}
+              <p class="muted small" style="margin:4px 0 10px">Sin documentos registrados.</p>
+            {% endif %}
+
+            {{ f.add_inline('form-doc-' ~ v.idViajero,
+                url_for('items.crear_en_viajero', parent_id=v.idViajero, recurso='documentacion'),
+                recursos['documentacion']['campos'], defaults['documentacion'], 'Agregar documento') }}
+            <button class="btn btn-sm btn-subtle" data-toggle="form-doc-{{ v.idViajero }}">+ Agregar documento</button>
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty"><p>Aún no hay viajeros en este viaje.</p></div>
+    {% endif %}
+  </div>
+</section>
+
+{# ---------------- Vuelos ---------------- #}
+<section class="section" id="vuelos">
+  <div class="section-head">
+    <h2>Vuelos</h2>
+    <span class="count">{{ viaje.vuelos|length }}</span>
+    <div class="actions"><button class="btn btn-sm" data-toggle="form-vuelos">+ Agregar vuelo</button></div>
+  </div>
+  <div class="section-body">
+    {{ f.add_inline('form-vuelos',
+        url_for('items.crear_en_viaje', parent_id=viaje.idViaje, recurso='vuelos'),
+        recursos['vuelos']['campos'], defaults['vuelos'], 'Agregar vuelo') }}
+
+    {% if viaje.vuelos %}
+      <div class="table-wrap">
+        <table class="data">
+          <thead><tr><th>Ruta</th><th>Salida</th><th>Regreso</th><th class="num">Precio</th><th class="center">Por persona</th><th class="center">Incluir</th><th class="num">Línea</th><th></th></tr></thead>
+          <tbody>
+            {% for v in viaje.vuelos %}
+              <tr class="{{ '' if v.incluido else 'excluida' }}">
+                <td class="nowrap">{{ v.aeropuertoSalida or '—' }} → {{ v.aeropuertoLlegada or '—' }}{% if v.equipaje %}<br><span class="muted small">{{ v.equipaje }}</span>{% endif %}</td>
+                <td class="nowrap">{{ v.fechaSalida|fechahora }}</td>
+                <td class="nowrap">{{ v.fechaRegreso|fechahora }}</td>
+                <td class="num cifra">{{ v.precio|money }}</td>
+                <td class="center">{{ f.toggle('vuelos', v.idVuelo, 'porPersona', v.porPersona) }}</td>
+                <td class="center">{{ f.toggle('vuelos', v.idVuelo, 'incluido', v.incluido) }}</td>
+                <td class="num linea cifra">{{ v.costo_linea(num)|money }}</td>
+                <td>{{ f.row_actions('vuelos', v.idVuelo, '¿Eliminar este vuelo?') }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot><tr><td colspan="6" class="num muted">Subtotal incluido</td><td class="num linea cifra">{{ (presupuesto.costoVuelo or 0)|money }}</td><td></td></tr></tfoot>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty"><p>Sin vuelos. Agrega opciones para compararlas.</p></div>
+    {% endif %}
+  </div>
+</section>
+
+{# ---------------- Hospedaje ---------------- #}
+<section class="section" id="hospedaje">
+  <div class="section-head">
+    <h2>Hospedaje</h2>
+    <span class="count">{{ viaje.hospedajes|length }}</span>
+    <div class="actions"><button class="btn btn-sm" data-toggle="form-hospedajes">+ Agregar hospedaje</button></div>
+  </div>
+  <div class="section-body">
+    {{ f.add_inline('form-hospedajes',
+        url_for('items.crear_en_viaje', parent_id=viaje.idViaje, recurso='hospedajes'),
+        recursos['hospedajes']['campos'], defaults['hospedajes'], 'Agregar hospedaje') }}
+
+    {% if viaje.hospedajes %}
+      <div class="table-wrap">
+        <table class="data">
+          <thead><tr><th>Nombre</th><th>Tipo</th><th class="num">Costo grupo</th><th class="num">Costo/persona</th><th class="center">Desayuno</th><th class="num">Punt.</th><th class="center">Incluir</th><th class="num">Línea</th><th></th></tr></thead>
+          <tbody>
+            {% for h in viaje.hospedajes %}
+              <tr class="{{ '' if h.incluido else 'excluida' }}">
+                <td>{{ h.nombre }}{% if h.ubicacion %}<br><span class="muted small">{{ h.ubicacion }}</span>{% endif %}</td>
+                <td class="nowrap">{{ h.tipoAlojamiento or '—' }}{% if h.categoria %}<br><span class="muted small">{{ h.categoria }}</span>{% endif %}</td>
+                <td class="num cifra">{{ h.costoGrupo|money if h.costoGrupo is not none else '—' }}</td>
+                <td class="num cifra">{{ h.costoPersona|money if h.costoPersona is not none else '—' }}</td>
+                <td class="center">{% if h.desayuno %}<span class="badge ok">Sí</span>{% else %}<span class="badge">No</span>{% endif %}</td>
+                <td class="num">{{ h.puntuacion if h.puntuacion is not none else '—' }}</td>
+                <td class="center">{{ f.toggle('hospedajes', h.idHospedaje, 'incluido', h.incluido) }}</td>
+                <td class="num linea cifra">{{ h.costo_linea(num)|money }}</td>
+                <td>{{ f.row_actions('hospedajes', h.idHospedaje, '¿Eliminar este hospedaje?') }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot><tr><td colspan="7" class="num muted">Subtotal incluido</td><td class="num linea cifra">{{ (presupuesto.costoHospedaje or 0)|money }}</td><td></td></tr></tfoot>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty"><p>Sin hospedajes. Agrega opciones para compararlas.</p></div>
+    {% endif %}
+  </div>
+</section>
+
+{# ---------------- Transporte ---------------- #}
+<section class="section" id="transporte">
+  <div class="section-head">
+    <h2>Transporte</h2>
+    <span class="count">{{ viaje.transportes|length }}</span>
+    <div class="actions"><button class="btn btn-sm" data-toggle="form-transportes">+ Agregar transporte</button></div>
+  </div>
+  <div class="section-body">
+    {{ f.add_inline('form-transportes',
+        url_for('items.crear_en_viaje', parent_id=viaje.idViaje, recurso='transportes'),
+        recursos['transportes']['campos'], defaults['transportes'], 'Agregar transporte') }}
+
+    {% if viaje.transportes %}
+      <div class="table-wrap">
+        <table class="data">
+          <thead><tr><th>Tipo</th><th>Unidad</th><th>Zonas</th><th class="num">Costo</th><th class="center">Por persona</th><th class="center">Incluir</th><th class="num">Línea</th><th></th></tr></thead>
+          <tbody>
+            {% for t in viaje.transportes %}
+              <tr class="{{ '' if t.incluido else 'excluida' }}">
+                <td>{{ t.tipo }}{% if t.descripcion %}<br><span class="muted small">{{ t.descripcion }}</span>{% endif %}</td>
+                <td class="nowrap">{{ t.unidad or '—' }}</td>
+                <td class="nowrap">{{ t.zonas or '—' }}</td>
+                <td class="num cifra">{{ t.costo|money if t.costo is not none else '—' }}</td>
+                <td class="center">{{ f.toggle('transportes', t.idTransporte, 'porPersona', t.porPersona) }}</td>
+                <td class="center">{{ f.toggle('transportes', t.idTransporte, 'incluido', t.incluido) }}</td>
+                <td class="num linea cifra">{{ t.costo_linea(num)|money }}</td>
+                <td>{{ f.row_actions('transportes', t.idTransporte, '¿Eliminar este transporte?') }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot><tr><td colspan="6" class="num muted">Subtotal incluido</td><td class="num linea cifra">{{ (presupuesto.costoTransporte or 0)|money }}</td><td></td></tr></tfoot>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty"><p>Sin transporte. Agrega opciones para compararlas.</p></div>
+    {% endif %}
+  </div>
+</section>
+
+{# ---------------- Actividades ---------------- #}
+<section class="section" id="actividades">
+  <div class="section-head">
+    <h2>Actividades</h2>
+    <span class="count">{{ viaje.actividades|length }}</span>
+    <div class="actions"><button class="btn btn-sm" data-toggle="form-actividades">+ Agregar actividad</button></div>
+  </div>
+  <div class="section-body">
+    {{ f.add_inline('form-actividades',
+        url_for('items.crear_en_viaje', parent_id=viaje.idViaje, recurso='actividades'),
+        recursos['actividades']['campos'], defaults['actividades'], 'Agregar actividad') }}
+
+    {% if viaje.actividades %}
+      <div class="table-wrap">
+        <table class="data">
+          <thead><tr><th>Actividad</th><th>Ubicación</th><th class="num">Precio</th><th class="center">Por persona</th><th class="center">Incluir</th><th class="num">Línea</th><th></th></tr></thead>
+          <tbody>
+            {% for a in viaje.actividades %}
+              <tr class="{{ '' if a.incluido else 'excluida' }}">
+                <td>{{ a.nombre }}{% if a.descripcion %}<br><span class="muted small">{{ a.descripcion }}</span>{% endif %}</td>
+                <td>{{ a.ubicacion or '—' }}</td>
+                <td class="num cifra">{{ a.precio|money if a.precio is not none else '—' }}</td>
+                <td class="center">{{ f.toggle('actividades', a.idActividad, 'porPersona', a.porPersona) }}</td>
+                <td class="center">{{ f.toggle('actividades', a.idActividad, 'incluido', a.incluido) }}</td>
+                <td class="num linea cifra">{{ a.costo_linea(num)|money }}</td>
+                <td>{{ f.row_actions('actividades', a.idActividad, '¿Eliminar esta actividad?') }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot><tr><td colspan="5" class="num muted">Subtotal incluido</td><td class="num linea cifra">{{ (presupuesto.costoActividades or 0)|money }}</td><td></td></tr></tfoot>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty"><p>Sin actividades. Agrega los lugares que quieras visitar.</p></div>
+    {% endif %}
+  </div>
+</section>
+
+{% endblock %}

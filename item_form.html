@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% import "_macros.html" as f %}
+{% block title %}{{ titulo }} · Cotizador{% endblock %}
+
+{% block content %}
+  <div class="crumb">
+    <a href="{{ url_for('main.index') }}">Viajes</a>
+    / <a href="{{ url_for('viajes.detalle', viaje_id=viaje_id) }}">Detalle del viaje</a>
+    / {{ 'Editar' if modo == 'editar' else 'Nuevo' }} {{ titulo|lower }}
+  </div>
+
+  <div class="page-head"><h1>{{ 'Editar' if modo == 'editar' else 'Nuevo' }} {{ titulo|lower }}</h1></div>
+
+  <div class="card card-pad" style="max-width:720px">
+    {# action="" envia el formulario a la MISMA URL desde la que se abrio,
+       que ya es la ruta correcta tanto para crear como para editar. #}
+    <form method="post" action="">
+      {{ f.render_campos(campos, valores) }}
+      <div class="form-foot">
+        <button type="submit" class="btn">{{ 'Guardar cambios' if modo == 'editar' else 'Agregar' }}</button>
+        <a class="btn btn-ghost" href="{{ url_for('viajes.detalle', viaje_id=viaje_id) }}">Cancelar</a>
+      </div>
+    </form>
+  </div>
+{% endblock %}

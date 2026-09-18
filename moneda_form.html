@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% import "_macros.html" as f %}
+{% block title %}Editar moneda · Cotizador{% endblock %}
+
+{% block content %}
+  <div class="crumb"><a href="{{ url_for('monedas.index') }}">Monedas</a> / Editar {{ moneda.codigo }}</div>
+  <div class="page-head"><h1>Editar moneda</h1></div>
+
+  <div class="card card-pad" style="max-width:600px">
+    <form method="post" action="">
+      {{ f.render_campos(campos, valores) }}
+      <div class="form-foot">
+        <button type="submit" class="btn">Guardar</button>
+        <a class="btn btn-ghost" href="{{ url_for('monedas.index') }}">Cancelar</a>
+      </div>
+    </form>
+  </div>
+{% endblock %}

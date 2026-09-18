@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Cotización #{{ cotizacion.idCotizacion }} · Cotizador{% endblock %}
+
+{% block content %}
+  {% set num = viaje.numViajeros or 1 %}
+  {% set tc = cotizacion.tipoCambio or 1 %}
+  {% set cod = cotizacion.moneda.codigo if cotizacion.moneda else '' %}
+
+  <div class="crumb no-print">
+    <a href="{{ url_for('main.index') }}">Viajes</a>
+    / <a href="{{ url_for('viajes.detalle', viaje_id=viaje.idViaje) }}">{{ viaje.origen }} → {{ viaje.destino }}</a>
+    / Cotización #{{ cotizacion.idCotizacion }}
+  </div>
+
+  <div class="page-head no-print">
+    <h1>Cotización #{{ cotizacion.idCotizacion }}</h1>
+    <div class="actions">
+      <button class="btn btn-ghost" data-print>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        Imprimir / PDF
+      </button>
+    </div>
+  </div>
+
+  <div class="doc">
+    <div class="doc-head">
+      <div>
+        <div class="doc-title">{{ viaje.origen }} → {{ viaje.destino }}</div>
+        <div class="muted small" style="margin-top:6px">
+          Cotización #{{ cotizacion.idCotizacion }} · {{ cotizacion.fecha|fecha }}<br>
+          {{ num }} viajero{{ 's' if num != 1 else '' }}
+          {% if viaje.fechaSalida %}· {{ viaje.fechaSalida|fecha }} – {{ viaje.fechaRegreso|fecha }}{% endif %}
+        </div>
+      </div>
+      <div class="doc-total">
+        <div class="muted small">Total {{ cod }}</div>
+        <div class="n cifra">{{ cotizacion.costoTotal|money }}</div>
+        <div class="muted small">{{ cotizacion.costoPorPersona|money }} {{ cod }} / persona</div>
+      </div>
+    </div>
+
+    <p class="muted small">
+      Montos convertidos desde {{ viaje.monedaPrincipal }} a {{ cod or 'la moneda de destino' }}
+      con un tipo de cambio de {{ tc }} ({{ cod }} por 1 {{ viaje.monedaPrincipal }}).
+    </p>
+
+    {% if presupuesto %}
+    <table>
+      <tbody>
+        <tr>
+          <td>Vuelos</td>
+          <td class="n">{{ presupuesto.costoVuelo|money }} {{ viaje.monedaPrincipal }}</td>
+          <td class="n">{{ (presupuesto.costoVuelo * tc)|money }} {{ cod }}</td>
+        </tr>
+        <tr>
+          <td>Hospedaje</td>
+          <td class="n">{{ presupuesto.costoHospedaje|money }} {{ viaje.monedaPrincipal }}</td>
+          <td class="n">{{ (presupuesto.costoHospedaje * tc)|money }} {{ cod }}</td>
+        </tr>
+        <tr>
+          <td>Transporte</td>
+          <td class="n">{{ presupuesto.costoTransporte|money }} {{ viaje.monedaPrincipal }}</td>
+          <td class="n">{{ (presupuesto.costoTransporte * tc)|money }} {{ cod }}</td>
+        </tr>
+        <tr>
+          <td>Actividades</td>
+          <td class="n">{{ presupuesto.costoActividades|money }} {{ viaje.monedaPrincipal }}</td>
+          <td class="n">{{ (presupuesto.costoActividades * tc)|money }} {{ cod }}</td>
+        </tr>
+        <tr>
+          <td>Comida</td>
+          <td class="n">{{ presupuesto.costoAlimentos|money }} {{ viaje.monedaPrincipal }}</td>
+          <td class="n">{{ (presupuesto.costoAlimentos * tc)|money }} {{ cod }}</td>
+        </tr>
+        <tr>
+          <td>Gastos extra</td>
+          <td class="n">{{ presupuesto.gastosExtras|money }} {{ viaje.monedaPrincipal }}</td>
+          <td class="n">{{ (presupuesto.gastosExtras * tc)|money }} {{ cod }}</td>
+        </tr>
+        <tr class="tot">
+          <td>Total</td>
+          <td class="n">{{ presupuesto.costoTotal|money }} {{ viaje.monedaPrincipal }}</td>
+          <td class="n">{{ cotizacion.costoTotal|money }} {{ cod }}</td>
+        </tr>
+      </tbody>
+    </table>
+    {% endif %}
+
+    <p class="muted small" style="margin-top:20px">
+      Cotización estimada con fines de planeación. Los precios finales pueden variar
+      según disponibilidad y tipo de cambio vigente.
+    </p>
+  </div>
+
+  <div class="actions no-print">
+    <a class="btn btn-ghost" href="{{ url_for('viajes.detalle', viaje_id=viaje.idViaje) }}#cotizaciones">← Volver al viaje</a>
+    <form method="post" action="{{ url_for('cotizaciones.eliminar', cotizacion_id=cotizacion.idCotizacion) }}"
+          data-confirm="¿Eliminar esta cotización?">
+      <button class="btn btn-danger" type="submit">Eliminar cotización</button>
+    </form>
+  </div>
+{% endblock %}

@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Error {{ codigo }} · Cotizador{% endblock %}
+
+{% block content %}
+  <div class="card card-pad empty" style="margin-top:40px">
+    <h1 style="font-size:2.4rem; margin-bottom:6px">{{ codigo }}</h1>
+    <p>{{ mensaje }}</p>
+    <a class="btn" href="{{ url_for('main.index') }}">Volver al inicio</a>
+  </div>
+{% endblock %}

@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Entornos virtuales
+.venv/
+venv/
+env/
+
+# Base de datos e instancia de Flask (se genera en tiempo de ejecución)
+instance/
+*.db
+*.sqlite
+*.sqlite3
+
+# Variables de entorno
+.env
+
+# Sistema operativo / editores
+.DS_Store
+.vscode/
+.idea/

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Viajes · Cotizador{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <h1>Tus viajes</h1>
+      <p class="muted" style="margin:0">Planifica, compara opciones y cotiza cada viaje internacional.</p>
+    </div>
+    <div class="actions">
+      <a class="btn" href="{{ url_for('viajes.nuevo') }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Nuevo viaje
+      </a>
+    </div>
+  </div>
+
+  {% if viajes %}
+    <div class="trip-grid">
+      {% for v in viajes %}
+        <a class="trip-card" href="{{ url_for('viajes.detalle', viaje_id=v.idViaje) }}">
+          <div>
+            <div class="trip-route">
+              <span>{{ v.origen }}</span>
+              <span class="arrow" aria-hidden="true">→</span>
+              <span>{{ v.destino }}</span>
+            </div>
+            <div class="trip-sub">
+              {% if v.fechaSalida %}{{ v.fechaSalida|fecha }} – {{ v.fechaRegreso|fecha }}{% else %}Sin fechas{% endif %}
+              · {{ v.numViajeros }} viajero{{ 's' if v.numViajeros != 1 else '' }}
+            </div>
+          </div>
+          <div class="trip-total">
+            <div class="label">Costo estimado</div>
+            <div class="amount cifra">
+              {{ (v.presupuesto.costoTotal if v.presupuesto else 0)|money }}<span class="code">{{ v.monedaPrincipal }}</span>
+            </div>
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="card card-pad empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      <p>Aún no tienes viajes registrados.</p>
+      <a class="btn" href="{{ url_for('viajes.nuevo') }}">Crear el primero</a>
+    </div>
+  {% endif %}
+{% endblock %}

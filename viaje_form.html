@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% import "_macros.html" as f %}
+{% block title %}{{ 'Editar' if modo == 'editar' else 'Nuevo' }} viaje · Cotizador{% endblock %}
+
+{% block content %}
+  <div class="crumb">
+    <a href="{{ url_for('main.index') }}">Viajes</a>
+    {% if modo == 'editar' %} / <a href="{{ url_for('viajes.detalle', viaje_id=viaje.idViaje) }}">{{ viaje.origen }} → {{ viaje.destino }}</a>{% endif %}
+    / {{ 'Editar' if modo == 'editar' else 'Nuevo' }}
+  </div>
+
+  <div class="page-head"><h1>{{ 'Editar viaje' if modo == 'editar' else 'Nuevo viaje' }}</h1></div>
+
+  <div class="card card-pad" style="max-width:720px">
+    <form method="post"
+          action="{{ url_for('viajes.editar', viaje_id=viaje.idViaje) if modo == 'editar' else url_for('viajes.nuevo') }}">
+      {{ f.render_campos(campos, valores) }}
+      <div class="form-foot">
+        <button type="submit" class="btn">{{ 'Guardar cambios' if modo == 'editar' else 'Crear viaje' }}</button>
+        <a class="btn btn-ghost"
+           href="{{ url_for('viajes.detalle', viaje_id=viaje.idViaje) if modo == 'editar' else url_for('main.index') }}">Cancelar</a>
+      </div>
+    </form>
+  </div>
+{% endblock %}
